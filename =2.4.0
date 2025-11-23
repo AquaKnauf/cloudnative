@@ -1,0 +1,5 @@
+Collecting pygments
+  Using cached pygments-2.19.2-py3-none-any.whl.metadata (2.5 kB)
+Using cached pygments-2.19.2-py3-none-any.whl (1.2 MB)
+Installing collected packages: pygments
+Successfully installed pygments-2.19.2
