@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic
+yfinance
+pandas
+numpy
+sqlalchemy
+asyncpg
+pydantic-settings
