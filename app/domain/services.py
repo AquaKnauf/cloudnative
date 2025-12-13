@@ -1,62 +1,53 @@
+import logging
 from .ports import IMarketDataSource, IMarketIngestionService
 from .models import TimeSeriesPoint
-from sqlalchemy import text
 import pandas as pd
+
+logger = logging.getLogger("market_ingestion")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 class MarketIngestionService(IMarketIngestionService):
 
     def __init__(self, data_source: IMarketDataSource, repo):
         self.data_source = data_source
-        self.repo = repo  # repo must have async insert_data(ticker, df) method
+        self.repo = repo
 
-    async def get_online_data(self, ticker: str, interval: str, period: str):
-        """
-        Fetch online data, preprocess, convert to TimeSeriesPoint objects.
-        Returns list of points (optional, e.g., for API response)
-        """
-        df = await self.data_source.fetch(ticker, interval, period)
+    async def get_online_data(self, series_id: str, interval: str, period: str):
+        logger.info("Fetching online data for %s interval=%s period=%s", series_id, interval, period)
+        df = await self.data_source.fetch(series_id, interval, period)
         df = df.dropna().reset_index()
 
-        # Ensure datetime index
+        ts_col = None
         if "Datetime" in df.columns:
-            df["Datetime"] = pd.to_datetime(df["Datetime"])
+            df["Datetime"] = pd.to_datetime(df["Datetime"], utc=True)
+            ts_col = "Datetime"
         elif "Date" in df.columns:
-            df["Date"] = pd.to_datetime(df["Date"])
+            df["Date"] = pd.to_datetime(df["Date"], utc=True)
+            ts_col = "Date"
         else:
             raise ValueError("No datetime column found in fetched data.")
 
-        # Convert to list of TimeSeriesPoint
-        points = []
-        for _, row in df.iterrows():
-            points.append(TimeSeriesPoint(
-                timestamp=row["Datetime"] if "Datetime" in df.columns else row["Date"],
+        points = [
+            TimeSeriesPoint(
+                timestamp=row[ts_col],
                 open=row["Open"],
                 high=row["High"],
                 low=row["Low"],
                 close=row["Close"],
                 volume=row["Volume"]
-            ))
-
+            )
+            for _, row in df.iterrows()
+        ]
+        logger.info("Fetched %d points for %s", len(points), series_id)
         return points
 
-    async def fetch_and_store(self, ticker: str, interval: str, period: str):
-        """
-        Fetch online data and store it in DB (TimescaleDB/PostgreSQL).
-        Returns number of inserted rows.
-        """
-        df = await self.data_source.fetch(ticker, interval, period)
-        df = df.dropna().reset_index()
-        # Ensure datetime index
-        if "Datetime" in df.columns:
-            df["Datetime"] = pd.to_datetime(df["Datetime"])
-            df.set_index("Datetime", inplace=True)
-        elif "Date" in df.columns:
-            df["Date"] = pd.to_datetime(df["Date"])
-            df.set_index("Date", inplace=True)
-        else:
-            raise ValueError("No datetime column found in fetched data.")
-
-        # Insert into DB via repo
-        await self.repo.insert_data(ticker, df)
-        return len(df)
-
+    async def fetch_and_store(self, series_id: str, interval: str, period: str):
+        points = await self.get_online_data(series_id, interval, period)
+        if points:
+            logger.info("Inserting %d points into DB for %s", len(points), series_id)
+            await self.repo.insert_data(series_id, points)
+        return len(points)

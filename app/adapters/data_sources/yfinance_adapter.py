@@ -3,8 +3,8 @@ from app.domain.ports import IMarketDataSource
 
 class YFinanceAdapter(IMarketDataSource):
 
-    async def fetch(self, ticker: str, interval: str, period: str):
-        ticker_obj = yf.Ticker(ticker)
+    async def fetch(self, series_id: str, interval: str, period: str):
+        ticker_obj = yf.Ticker(series_id)
         df = ticker_obj.history(interval=interval, period=period)
 
         df.index.name = "Datetime"

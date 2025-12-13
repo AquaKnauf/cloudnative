@@ -1,0 +1,30 @@
+version: "3.10"
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: timescaledb
+    environment:
+      POSTGRES_USER: tsuser
+      POSTGRES_PASSWORD: ts_password
+      POSTGRES_DB: timeseries
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+      - ./k8s/timescaledb-init:/docker-entrypoint-initdb.d
+
+  preprocessing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: preprocessing
+    depends_on:
+      - timescaledb
+    environment:
+      DATABASE_URL: postgresql+psycopg2://tsuser:ts_password@host.containers.internal:5432/timeseries
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./preprocessing-service/src:/app/src:ro
+volumes:
+  timescaledb-data:

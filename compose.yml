@@ -1,16 +1,17 @@
-version: "3.8"
+version: "3.10"
 services:
   timescaledb:
-    image: timescale/timescaledb:latest-pg15
-    container_name: tsdb_financedata
+    image: docker.io/timescale/timescaledb:latest-pg15
+    container_name: timescaledb
     environment:
-      POSTGRES_USER: finance
-      POSTGRES_PASSWORD: finance
-      POSTGRES_DB: finance_db
+      POSTGRES_USER: tsuser
+      POSTGRES_PASSWORD: ts_password
+      POSTGRES_DB: time_series_raw
     ports:
       - "5432:5432"
     volumes:
-      - tsdbdata:/var/lib/postgresql/data
+      - timescaledb-data:/var/lib/postgresql/data
+      - ./k8s/timescaledb-init:/docker-entrypoint-initdb.d
 
 volumes:
-  tsdbdata:
+  timescaledb-data:
