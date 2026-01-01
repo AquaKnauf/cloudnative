@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DB_URL: str = "postgresql+asyncpg://tsuser:ts_passwordingestion-timescaledb:5432/timeseries"
+    DB_URL: str = "postgresql+asyncpg://tsuser:ts_password@ingestion-timescaledb:5432/timeseries"
     KAFKA_BOOTSTRAP_SERVERS: str = "kafka:9092"
 
 
