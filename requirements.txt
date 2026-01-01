@@ -7,3 +7,4 @@ numpy
 sqlalchemy
 asyncpg
 pydantic-settings
+kafka-python
